@@ -8,11 +8,25 @@
 
 ## 远程仓库
 
-`https://github.com/klein7syd/reps` · 分支 `main` · **公开仓库**
+`https://github.com/klein7syd/reps` · 分支 `main` · **公开仓库** · 已推送（2026-10-28 17:17）
 
 ```bash
-./push.sh        # 首次推送（需先授权 GitHub 连接器）
-git pull         # 之后每次开工前
+git clone https://github.com/klein7syd/reps     # 新窗口第一步
+git pull                                        # 之后每次开工前
+./check.sh                                      # 改完自检
+git push                                        # 提上去
+```
+
+**已实测：**从远端全新 clone → `./check.sh --strict` → 78,617 B / md5 `f9701638…` / 逐字节一致 / 28 项全过。说明别人拉下来就能直接构建，不依赖任何本地残留。
+
+### CI 暂未启用
+
+GitHub 禁止没有 `workflow` 权限的令牌创建 `.github/workflows/` 下的文件，首次推送被挡了。
+配置已备好，放在 `/workspace/pending/ci.yml.pending`；拿到带 `workflow` 权限的令牌后一条命令补回：
+
+```bash
+mkdir -p .github/workflows && cp /workspace/pending/ci.yml.pending .github/workflows/ci.yml
+git add .github && git commit -m "补 CI" && ./push.sh
 ```
 
 ## 三条命令
