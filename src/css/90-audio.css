@@ -1,0 +1,6 @@
+/* ===== 音乐卡 ===== */
+#audioBar { display: none; }
+#audioBar.on { display: block; }
+.seek { width: 100%; }
+.tiny { font-size: 11px; color: #8a8aa0; }
+

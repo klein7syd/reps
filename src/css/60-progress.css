@@ -1,0 +1,7 @@
+/* ===== 进度页 ===== */
+.excard { border: 3px solid #2a2a3a; background: #14141c; padding: 10px; margin-bottom: 10px; }
+.excard .nm { font-size: 15px; color: #7CFC00; }
+.excard .meta { font-size: 12px; color: #9a9ab0; }
+.excard .adv { font-size: 12px; color: #ffd166; margin-top: 4px; }
+.skel { opacity: .4; pointer-events: none; }
+

@@ -1,0 +1,1174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>REPS · 训练陪伴</title>
+<style>/* ===== REPS 单文件版 · 像素风样式 ===== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: ui-monospace, "SFMono-Regular", "Courier New", monospace;
+  background: #0d0d12;
+  color: #e8e8f0;
+  -webkit-text-size-adjust: 100%;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-x: hidden;            /* 杜绝横向滚动 */
+}
+img { image-rendering: pixelated; }
+
+/* 主容器：居中、限宽，内容超出走纵向滚动 */
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+header.bar {
+  padding: 10px 12px 8px;
+  border-bottom: 3px solid #2a2a3a;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+header.bar h1 {
+  font-size: 18px; margin: 0; letter-spacing: 2px;
+  color: #7CFC00;
+  text-shadow: 2px 2px 0 #1a3a00;
+}
+header.bar .today { font-size: 11px; color: #8a8aa0; margin-left: auto; }
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 84px;       /* 给固定底栏留位 */
+}
+section.tab { display: none; }
+section.tab.on { display: block; }
+
+/* ===== 通用控件（键盘可达、像素风） ===== */
+button {
+  font-family: inherit;
+  font-size: 14px;
+  color: #e8e8f0;
+  background: #15151c;
+  border: 3px solid #3a3a4a;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 0;
+  line-height: 1.1;
+  transition: transform .04s, background .1s, border-color .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+button:hover { border-color: #5a5a72; }
+button:active { transform: translate(1px, 1px); }
+button:focus-visible { outline: 3px solid #7CFC00; outline-offset: 2px; }
+button.primary { background: #1d3a00; border-color: #7CFC00; color: #d6ffb0; }
+button.danger  { border-color: #ff004d; color: #ffb3c8; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+input, select {
+  font-family: inherit; font-size: 14px;
+  color: #e8e8f0; background: #15151c;
+  border: 3px solid #3a3a4a; border-radius: 0;
+  padding: 9px 8px; width: 100%;
+}
+input:focus, select:focus { outline: 3px solid #7CFC00; outline-offset: 1px; border-color: #5a5a72; }
+input.invalid { border-color: #ff004d; }
+label { display: block; font-size: 12px; color: #9a9ab0; margin: 8px 0 3px; }
+
+/* ===== 底栏 Tab ===== */
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  max-width: 480px; margin: 0 auto;
+  display: flex; gap: 0;
+  background: #12121a;
+  border-top: 3px solid #2a2a3a;
+}
+nav.tabs button {
+  flex: 1 1 0; border: none; border-right: 2px solid #23232f;
+  background: transparent; padding: 9px 2px; font-size: 11px;
+  color: #8a8aa0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+nav.tabs button:last-child { border-right: none; }
+nav.tabs button.on { color: #7CFC00; background: #16161f; }
+nav.tabs .ic { font-size: 18px; line-height: 1; }
+
+/* ===== 卡片 / 区块 ===== */
+.card { border: 3px solid #2a2a3a; background: #14141c; padding: 12px; margin-bottom: 12px; }
+.card h2 { font-size: 13px; margin: 0 0 8px; color: #9a9ab0; letter-spacing: 1px; text-transform: uppercase; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > * { min-width: 0; }
+.spread { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* ===== 三态 ===== */
+.state-empty  { color: #8a8aa0; border: 3px dashed #2a2a3a; padding: 18px 12px; text-align: center; }
+.state-loading { color: #7CFC00; border: 3px solid #2a3a1a; padding: 18px 12px; text-align: center; }
+.state-loading::after { content: "▮"; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.state-error  { color: #ffb3c8; border: 3px solid #ff004d; padding: 12px; background: #2a0a14; }
+.toast {
+  position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%);
+  background: #1d3a00; border: 3px solid #7CFC00; color: #d6ffb0;
+  padding: 10px 14px; font-size: 13px; z-index: 50; max-width: 90%;
+  box-shadow: 3px 3px 0 #000;
+}
+.toast.err { background: #2a0a14; border-color: #ff004d; color: #ffb3c8; }
+
+/* ===== 训练页 ===== */
+#exName { font-size: 20px; color: #7CFC00; margin: 0 0 6px; letter-spacing: 1px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.chip { border: 3px solid #3a3a4a; background: #15151c; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+.chip.on { border-color: #7CFC00; color: #d6ffb0; background: #1d3a00; }
+.numgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.setlist { list-style: none; padding: 0; margin: 10px 0 0; }
+.setlist li { display: flex; justify-content: space-between; border-bottom: 2px solid #23232f; padding: 6px 2px; }
+.rest-box { border: 3px solid #2a3a1a; background: #10160a; padding: 12px; text-align: center; margin: 10px 0; }
+.rest-time { font-size: 40px; color: #7CFC00; font-variant-numeric: tabular-nums; }
+.rest-state { font-size: 12px; color: #9a9ab0; }
+
+/* ===== 进度页 ===== */
+.excard { border: 3px solid #2a2a3a; background: #14141c; padding: 10px; margin-bottom: 10px; }
+.excard .nm { font-size: 15px; color: #7CFC00; }
+.excard .meta { font-size: 12px; color: #9a9ab0; }
+.excard .adv { font-size: 12px; color: #ffd166; margin-top: 4px; }
+.skel { opacity: .4; pointer-events: none; }
+
+/* ===== 成长页 ===== */
+.big-num { font-size: 30px; color: #7CFC00; font-variant-numeric: tabular-nums; }
+.bar-track { height: 16px; border: 3px solid #3a3a4a; background: #15151c; margin: 6px 0; }
+.bar-fill { height: 100%; background: #7CFC00; }
+.pet { text-align: center; border: 3px solid #2a3a1a; background: #10160a; padding: 14px; }
+.pet .face { font-size: 46px; }
+.pet .pname { font-size: 18px; color: #7CFC00; }
+.pet .pmood { font-size: 13px; color: #9a9ab0; }
+
+/* ===== 动作库 ===== */
+.mfilter { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.mfilter .chip { font-size: 11px; padding: 5px 8px; }
+.mcard { border: 3px solid #2a2a3a; background: #14141c; padding: 9px 10px; margin-bottom: 8px; }
+.mcard .mn { font-size: 14px; color: #e8e8f0; }
+.mcard .men { font-size: 11px; color: #6a6a80; }
+.mcard .mtags { font-size: 11px; color: #9a9ab0; margin: 4px 0; }
+.mcard .mcue { font-size: 11px; color: #7aa6ff; }
+
+/* ===== 身体数据 ===== */
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric { border: 3px solid #2a2a3a; background: #14141c; padding: 8px; }
+.metric .k { font-size: 11px; color: #9a9ab0; }
+.metric .v { font-size: 16px; color: #7CFC00; }
+
+/* ===== 音乐卡 ===== */
+#audioBar { display: none; }
+#audioBar.on { display: block; }
+.seek { width: 100%; }
+.tiny { font-size: 11px; color: #8a8aa0; }
+
+/* ===== 响应式：小屏微调 ===== */
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+  .rest-time { font-size: 34px; }
+  nav.tabs button { font-size: 10px; }
+  nav.tabs .ic { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <h1>REPS</h1>
+    <span class="today" id="today"></span>
+  </header>
+
+  <main>
+    <!-- 训练 -->
+    <section class="tab on" id="tab-train" aria-label="训练">
+      <div class="card">
+        <h2>本次训练</h2>
+        <label for="moveSel">选择动作</label>
+        <select id="moveSel" aria-label="选择动作"></select>
+        <p id="exName">未选择</p>
+        <div class="chips" id="restChips" role="group" aria-label="组间休息档位"></div>
+        <div class="numgrid">
+          <div><label for="wInput">重量 (kg)</label><input id="wInput" type="number" inputmode="decimal" min="0" step="0.5" aria-label="重量"></div>
+          <div><label for="rInput">次数</label><input id="rInput" type="number" inputmode="numeric" min="0" step="1" aria-label="次数"></div>
+        </div>
+        <div class="row">
+          <button class="primary" id="addSetBtn">+ 加一组</button>
+          <button id="skipRestBtn" disabled>跳过休息</button>
+        </div>
+        <div class="rest-box" id="restBox" hidden>
+          <div class="rest-time" id="restTime">0</div>
+          <div class="rest-state" id="restState">休息中</div>
+        </div>
+        <ul class="setlist" id="setList"></ul>
+        <div class="row" style="margin-top:10px">
+          <button class="danger" id="finishBtn">结束并保存</button>
+        </div>
+        <div id="trainMsg" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h2>陪伴音乐（导入本地音频）</h2>
+        <div id="audioBar">
+          <div class="row">
+            <button id="playBtn">▶ 播放</button>
+            <span class="tiny" id="audioName"></span>
+          </div>
+          <input class="seek" id="seek" type="range" min="0" max="100" value="0" aria-label="播放进度">
+          <div class="tiny" id="audioTime">0:00 / 0:00</div>
+          <div class="tiny" id="bondMsg"></div>
+        </div>
+        <input type="file" id="audioFile" accept="audio/*" aria-label="导入本地音乐">
+        <div id="audioMsg" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- 进度 -->
+    <section class="tab" id="tab-stats" aria-label="进度">
+      <div class="card">
+        <h2>训练进度</h2>
+        <div id="statsBody"></div>
+      </div>
+    </section>
+
+    <!-- 成长 -->
+    <section class="tab" id="tab-grow" aria-label="成长">
+      <div class="card">
+        <h2>修为与境界</h2>
+        <div id="growBody"></div>
+      </div>
+      <div class="card">
+        <h2>灵兽</h2>
+        <div id="petBody"></div>
+      </div>
+      <div class="card">
+        <h2>数据备份</h2>
+        <div class="row">
+          <button id="exportBtn">导出数据</button>
+          <button id="importBtn">导入数据</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <div id="dataMsg" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- 动作库 -->
+    <section class="tab" id="tab-moves" aria-label="动作库">
+      <div class="card">
+        <h2>动作库</h2>
+        <input id="moveSearch" type="search" placeholder="搜索动作 / 部位 / 器械" aria-label="搜索动作库">
+        <div class="mfilter" id="groupFilter" role="group" aria-label="按部位筛选"></div>
+        <div id="movesBody"></div>
+      </div>
+    </section>
+
+    <!-- 身体 -->
+    <section class="tab" id="tab-body" aria-label="身体数据">
+      <div class="card">
+        <h2>身体数据</h2>
+        <label for="sexSel">性别</label>
+        <select id="sexSel"><option value="m">男</option><option value="f">女</option></select>
+        <label for="ageInput">年龄</label><input id="ageInput" type="number" min="10" max="120" value="25" aria-label="年龄">
+        <label for="hInput">身高 (cm)</label><input id="hInput" type="number" min="100" max="250" value="175" aria-label="身高">
+        <label for="wBodyInput">体重 (kg)</label><input id="wBodyInput" type="number" min="30" max="300" value="70" aria-label="体重">
+        <label for="actSel">活动水平</label>
+        <select id="actSel">
+          <option value="1.2">久坐（几乎不运动）</option>
+          <option value="1.375">轻度（每周 1–3 次）</option>
+          <option value="1.55" selected>中等（每周 3–5 次）</option>
+          <option value="1.725">高强度（每周 6–7 次）</option>
+        </select>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="saveBodyBtn">保存并计算</button>
+        </div>
+        <div id="bodyMsg" style="margin-top:8px"></div>
+        <div class="metrics" id="bodyMetrics" style="margin-top:10px"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs" id="nav" aria-label="主导航">
+    <button data-tab="train" class="on" aria-label="训练"><span class="ic">▣</span>训练</button>
+    <button data-tab="stats" aria-label="进度"><span class="ic">▤</span>进度</button>
+    <button data-tab="grow" aria-label="成长"><span class="ic">✦</span>成长</button>
+    <button data-tab="moves" aria-label="动作库"><span class="ic">≡</span>动作库</button>
+    <button data-tab="body" aria-label="身体数据"><span class="ic">◈</span>身体</button>
+  </nav>
+</div>
+
+<script>/* REPS 动作库 109 个，自动生成 */
+window.MOVES = {"version":1,"updated":"2026-10-27","groups":["胸","背","腿","肩","臂","核心","全身"],"equip":["杠铃","哑铃","绳索","器械","自重","其他"],"patterns":["推","拉","蹲","铰链","单腿","核心","手臂","全身"],"moves":[{"n":"杠铃卧推","en":"Barbell Bench Press","g":"胸","eq":"杠铃","p":"推","mus":"胸大肌、三角肌前束、肱三头肌","cue":["肩胛后收下沉，双脚踩实地面","杠下落到胸中下部，肘角 45-75°","推起时保持肩不耸、胸不塌"],"err":["肘完全外展成 90° 压肩","屁股离凳借力"],"alt":["哑铃卧推","器械推胸","上斜杠铃卧推"]},{"n":"上斜杠铃卧推","en":"Incline Barbell Bench Press","g":"胸","eq":"杠铃","p":"推","mus":"胸大肌上部、三角肌前束","cue":["靠背 30-45°，太高会变成推肩","杠落到锁骨下缘","全程控制下放 2 秒"],"err":["角度设到 60° 以上","臀部抬起"],"alt":["上斜哑铃卧推","器械上斜推"]},{"n":"哑铃卧推","en":"Dumbbell Bench Press","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌、三角肌前束、肱三头肌","cue":["哑铃下放到胸两侧，感受拉伸","推起时略微内收，不要碰铃","手腕保持中立不后折"],"err":["下放过深扯肩","两铃相撞卸力"],"alt":["杠铃卧推","器械推胸"]},{"n":"上斜哑铃卧推","en":"Incline Dumbbell Press","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌上部","cue":["凳角 30°，上背贴紧","手肘与身体约 45°","顶点不锁死，保持张力"],"err":["耸肩推","下落太快"],"alt":["上斜杠铃卧推","上斜器械推"]},{"n":"下斜杠铃卧推","en":"Decline Bench Press","g":"胸","eq":"杠铃","p":"推","mus":"胸大肌下部","cue":["固定好腿，避免下滑","杠落到下胸","行程短，控制节奏"],"err":["下落砸胸","腰部过度反弓"],"alt":["双杠臂屈伸","绳索夹胸"]},{"n":"哑铃飞鸟","en":"Dumbbell Fly","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌（拉伸位）","cue":["肘微屈固定角度","画弧下放，不变成推","起时想象抱大树"],"err":["肘角变化变成卧推","下放超过肩水平太多"],"alt":["绳索夹胸","蝴蝶机"]},{"n":"上斜哑铃飞鸟","en":"Incline Dumbbell Fly","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌上部","cue":["凳角 30°","控制下放到胸口两侧","顶端不完全并拢，保持张力"],"err":["重量过大靠甩","肘部锁死"],"alt":["上斜绳索夹胸","蝴蝶机"]},{"n":"绳索夹胸","en":"Cable Crossover","g":"胸","eq":"绳索","p":"推","mus":"胸大肌（中缝）","cue":["身体略前倾，核心收紧","双手画弧在身前交汇","顶峰挤压 1 秒"],"err":["用肩发力","重量过大身体后仰"],"alt":["蝴蝶机","哑铃飞鸟"]},{"n":"蝴蝶机夹胸","en":"Pec Deck Fly","g":"胸","eq":"器械","p":"推","mus":"胸大肌","cue":["背部贴紧靠垫","肘微屈，用胸带动","回位时控制，不要让配重砸"],"err":["肩前顶","幅度过大"],"alt":["绳索夹胸","哑铃飞鸟"]},{"n":"器械推胸","en":"Machine Chest Press","g":"胸","eq":"器械","p":"推","mus":"胸大肌、肱三头肌","cue":["座椅高度让把手对齐胸中","推到位不锁死","回位慢"],"err":["座位太高变推肩","半程动作"],"alt":["杠铃卧推","哑铃卧推"]},{"n":"双杠臂屈伸（胸版）","en":"Chest Dip","g":"胸","eq":"自重","p":"推","mus":"胸大肌下部、肱三头肌","cue":["身体前倾，肘略外展","下到肩略低于肘","肩不适就缩小幅度"],"err":["身体直立变三头主导","下放过深伤肩"],"alt":["下斜卧推","器械推胸"]},{"n":"俯卧撑","en":"Push-up","g":"胸","eq":"自重","p":"推","mus":"胸大肌、三角肌前束、核心","cue":["身体成一条直线，核心收紧","手在肩下略宽","胸接近地面再推起"],"err":["塌腰翘臀","只做半程"],"alt":["上斜俯卧撑","哑铃卧推"]},{"n":"上斜俯卧撑","en":"Incline Push-up","g":"胸","eq":"自重","p":"推","mus":"胸大肌下部","cue":["手撑在台面，身体成直线","控制下放","适合新手或力竭组"],"err":["塌腰","速度过快"],"alt":["俯卧撑","器械推胸"]},{"n":"钻石俯卧撑","en":"Diamond Push-up","g":"胸","eq":"自重","p":"推","mus":"肱三头肌、胸内侧","cue":["双手拇指食指相触成菱形","肘贴近身体","核心收紧不塌腰"],"err":["手放太前","肘外张"],"alt":["窄距卧推","绳索下压"]},{"n":"哑铃地板卧推","en":"Dumbbell Floor Press","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌、肱三头肌","cue":["躺地，肘触地即起","行程短，适合肩不适者","顶端挤压胸"],"err":["借惯性弹起","手腕折"],"alt":["杠铃卧推","器械推胸"]},{"n":"史密斯卧推","en":"Smith Machine Bench Press","g":"胸","eq":"器械","p":"推","mus":"胸大肌","cue":["轨迹固定，脚位可前移","控制下放","适合力竭组无保护"],"err":["依赖固定轨迹不练稳定肌","下放砸胸"],"alt":["杠铃卧推","器械推胸"]},{"n":"单臂哑铃卧推","en":"Single-arm Dumbbell Press","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌、核心抗旋","cue":["单侧做，核心抗旋转","另一手可扶腹","重量减半"],"err":["身体侧倾","速度过快"],"alt":["哑铃卧推","器械推胸"]},{"n":"下斜哑铃飞鸟","en":"Decline Dumbbell Fly","g":"胸","eq":"哑铃","p":"推","mus":"胸大肌下部","cue":["固定双腿","肘微屈画弧","控制回位"],"err":["重量过大","下放过深"],"alt":["双杠臂屈伸","绳索夹胸"]},{"n":"引体向上","en":"Pull-up","g":"背","eq":"自重","p":"拉","mus":"背阔肌、大圆肌、肱二头肌","cue":["肩胛先下沉再拉","胸口找杠，不要只用手臂","下放到手臂接近伸直"],"err":["耸肩甩腿","半程"],"alt":["高位下拉","助力引体"]},{"n":"反手引体向上","en":"Chin-up","g":"背","eq":"自重","p":"拉","mus":"背阔肌、肱二头肌","cue":["反握与肩同宽","肘向下向后拉","控制下放"],"err":["只靠手臂","身体摆动"],"alt":["引体向上","高位下拉"]},{"n":"高位下拉","en":"Lat Pulldown","g":"背","eq":"绳索","p":"拉","mus":"背阔肌","cue":["身体略后仰 10-15°","把杆拉到锁骨附近","肩胛先下沉后收"],"err":["拉到颈后","身体大幅后仰借力"],"alt":["引体向上","器械下拉"]},{"n":"窄距高位下拉","en":"Close-grip Lat Pulldown","g":"背","eq":"绳索","p":"拉","mus":"背阔肌下部、肱二头肌","cue":["V 把或窄握","肘贴身体下拉","顶峰挤压背阔"],"err":["用手臂主导","耸肩"],"alt":["高位下拉","坐姿划船"]},{"n":"杠铃划船","en":"Barbell Row","g":"背","eq":"杠铃","p":"拉","mus":"背阔肌、斜方肌中下部、菱形肌","cue":["髋铰链前倾 45°，背挺直","杠拉向下腹","肘贴身后拉"],"err":["弓背","用腰甩起"],"alt":["哑铃单臂划船","T 杠划船"]},{"n":"潘德雷划船","en":"Pendlay Row","g":"背","eq":"杠铃","p":"拉","mus":"上背、背阔肌","cue":["每次回到地面静止","爆发拉起，控制下放","背全程挺直"],"err":["弓背","靠惯性"],"alt":["杠铃划船","T 杠划船"]},{"n":"哑铃单臂划船","en":"One-arm Dumbbell Row","g":"背","eq":"哑铃","p":"拉","mus":"背阔肌、菱形肌","cue":["一手撑凳，背平","肘贴身体拉向髋","不要转体借力"],"err":["转腰","耸肩"],"alt":["坐姿划船","杠铃划船"]},{"n":"坐姿绳索划船","en":"Seated Cable Row","g":"背","eq":"绳索","p":"拉","mus":"背阔肌、斜方肌中部","cue":["膝盖微屈，背挺直","拉到腹部，肩胛后收","回位时背不弓"],"err":["身体前后大幅摆动","耸肩"],"alt":["器械划船","哑铃单臂划船"]},{"n":"T 杠划船","en":"T-bar Row","g":"背","eq":"杠铃","p":"拉","mus":"中背、背阔肌","cue":["胸垫支撑或髋铰链","拉到腹部","顶峰挤压"],"err":["弓背","用腿蹬"],"alt":["杠铃划船","器械划船"]},{"n":"器械划船","en":"Machine Row","g":"背","eq":"器械","p":"拉","mus":"背阔肌、中背","cue":["胸贴靠垫","肘向后拉","控制回位"],"err":["靠垫脱离","半程"],"alt":["坐姿绳索划船","哑铃单臂划船"]},{"n":"直臂下压","en":"Straight-arm Pulldown","g":"背","eq":"绳索","p":"拉","mus":"背阔肌（孤立）","cue":["手臂近乎伸直","用背带动下压到大腿前","身体略前倾"],"err":["变成三头下压","耸肩"],"alt":["高位下拉","绳索划船"]},{"n":"面拉","en":"Face Pull","g":"背","eq":"绳索","p":"拉","mus":"三角肌后束、斜方肌中下部、肩袖","cue":["绳索设到面部高度","拉向额头两侧，肘高于手","外旋到位停 1 秒"],"err":["重量过大变划船","耸肩"],"alt":["反向飞鸟","绳索高位划船"]},{"n":"反向飞鸟","en":"Reverse Fly","g":"背","eq":"哑铃","p":"拉","mus":"三角肌后束、菱形肌","cue":["俯身或俯卧凳","肘微屈，向两侧打开","小重量多次数"],"err":["用斜方肌耸肩","重量过大"],"alt":["面拉","蝴蝶机反向"]},{"n":"耸肩","en":"Barbell Shrug","g":"背","eq":"杠铃","p":"拉","mus":"斜方肌上部","cue":["直上直下，不要转圈","顶点停 1 秒","下放到底拉伸"],"err":["转肩","屈肘借力"],"alt":["哑铃耸肩","绳索耸肩"]},{"n":"哑铃耸肩","en":"Dumbbell Shrug","g":"背","eq":"哑铃","p":"拉","mus":"斜方肌上部","cue":["哑铃在身体两侧","垂直上提","不转头不转肩"],"err":["幅度过小","速度过快"],"alt":["杠铃耸肩"]},{"n":"山羊挺身","en":"Back Extension","g":"背","eq":"自重","p":"铰链","mus":"竖脊肌、臀大肌、腘绳肌","cue":["髋部为轴折叠","起身到身体成直线即停","不要过度后仰"],"err":["腰部过伸","速度过快"],"alt":["罗马尼亚硬拉","反向山羊挺身"]},{"n":"澳式划船","en":"Inverted Row","g":"背","eq":"自重","p":"拉","mus":"背阔肌、中背、肱二头肌","cue":["身体成直线，脚跟着地","胸口拉向杆","控制下放"],"err":["塌腰","只用手臂"],"alt":["引体向上","坐姿划船"]},{"n":"助力引体","en":"Assisted Pull-up","g":"背","eq":"器械","p":"拉","mus":"背阔肌","cue":["辅助重量逐步减少","肩胛先下沉","控制下放 3 秒"],"err":["依赖辅助不进步","半程"],"alt":["高位下拉","引体向上"]},{"n":"绳索高位划船","en":"High Cable Row","g":"背","eq":"绳索","p":"拉","mus":"上背、三角肌后束","cue":["滑轮设高位","拉向胸口上方","肘高于手"],"err":["耸肩","身体后仰"],"alt":["面拉","器械划船"]},{"n":"深蹲","en":"Back Squat","g":"腿","eq":"杠铃","p":"蹲","mus":"股四头肌、臀大肌、竖脊肌","cue":["杠放斜方肌上部，脚略外八","下蹲到髋低于膝或平行","膝盖跟脚尖同向，全程核心收紧"],"err":["膝盖内扣","起身时屁股先起变早安式"],"alt":["前蹲","腿举","高脚杯深蹲"]},{"n":"前蹲","en":"Front Squat","g":"腿","eq":"杠铃","p":"蹲","mus":"股四头肌、核心","cue":["杠放锁骨前，肘抬高","上身保持直立","下蹲到底"],"err":["肘下沉杠前掉","上身过度前倾"],"alt":["深蹲","高脚杯深蹲"]},{"n":"高脚杯深蹲","en":"Goblet Squat","g":"腿","eq":"哑铃","p":"蹲","mus":"股四头肌、臀","cue":["哑铃抱在胸前","肘在膝内侧","下蹲时挺胸"],"err":["圆背","膝盖内扣"],"alt":["深蹲","腿举"]},{"n":"保加利亚分腿蹲","en":"Bulgarian Split Squat","g":"腿","eq":"哑铃","p":"单腿","mus":"股四头肌、臀大肌","cue":["后脚搭凳，前脚距凳一大步","身体略前倾，垂直下沉","前膝不超过脚尖太多"],"err":["前脚太近膝盖压力大","身体左右晃"],"alt":["箭步蹲","单腿腿举"]},{"n":"箭步蹲","en":"Walking Lunge","g":"腿","eq":"哑铃","p":"单腿","mus":"股四头肌、臀","cue":["向前跨大步","后膝接近地面","前脚掌发力起身"],"err":["步幅太小","身体前倒"],"alt":["反向箭步蹲","保加利亚分腿蹲"]},{"n":"反向箭步蹲","en":"Reverse Lunge","g":"腿","eq":"哑铃","p":"单腿","mus":"臀大肌、股四头肌","cue":["向后撤步","重心留在前脚","起身用前脚跟推地"],"err":["后撤太小","前膝内扣"],"alt":["箭步蹲","保加利亚分腿蹲"]},{"n":"腿举","en":"Leg Press","g":"腿","eq":"器械","p":"蹲","mus":"股四头肌、臀","cue":["脚踩踏板与肩同宽","下放到膝约 90°","腰背贴紧靠垫，不要抬臀"],"err":["下放过深抬臀伤腰","膝盖锁死"],"alt":["深蹲","哈克深蹲"]},{"n":"哈克深蹲","en":"Hack Squat","g":"腿","eq":"器械","p":"蹲","mus":"股四头肌","cue":["背贴靠垫，脚略前","下蹲到大腿平行","脚掌均匀发力"],"err":["脚跟离板","下放过深"],"alt":["腿举","深蹲"]},{"n":"腿屈伸","en":"Leg Extension","g":"腿","eq":"器械","p":"蹲","mus":"股四头肌（孤立）","cue":["调整靠背使膝对齐转轴","顶端停 1 秒","下放控制 2 秒"],"err":["甩腿","重量过大"],"alt":["腿举","哈克深蹲"]},{"n":"俯卧腿弯举","en":"Lying Leg Curl","g":"腿","eq":"器械","p":"铰链","mus":"腘绳肌","cue":["骨盆贴紧垫子","卷到最大幅度","离心慢放"],"err":["屁股抬起","甩动"],"alt":["坐姿腿弯举","罗马尼亚硬拉"]},{"n":"坐姿腿弯举","en":"Seated Leg Curl","g":"腿","eq":"器械","p":"铰链","mus":"腘绳肌","cue":["背贴靠垫，膝对齐转轴","下压到底","慢回"],"err":["身体前倾借力"],"alt":["俯卧腿弯举","罗马尼亚硬拉"]},{"n":"罗马尼亚硬拉","en":"Romanian Deadlift","g":"腿","eq":"杠铃","p":"铰链","mus":"腘绳肌、臀大肌、竖脊肌","cue":["膝微屈固定，髋向后推","杠贴腿下滑到小腿中部","背全程挺直，感受腘绳肌拉伸"],"err":["弓背","变成屈膝硬拉"],"alt":["直腿硬拉","臀桥"]},{"n":"直腿硬拉","en":"Stiff-leg Deadlift","g":"腿","eq":"杠铃","p":"铰链","mus":"腘绳肌、竖脊肌","cue":["膝几乎伸直","髋主导下放","到腘绳肌极限即起"],"err":["弓背","下放太低"],"alt":["罗马尼亚硬拉","山羊挺身"]},{"n":"传统硬拉","en":"Deadlift","g":"腿","eq":"杠铃","p":"铰链","mus":"臀大肌、腘绳肌、竖脊肌、斜方肌","cue":["杠贴小腿，肩在杠前","腿先发力把地面推开","站直锁髋不后仰"],"err":["弓背起杠","杠离身体太远"],"alt":["相扑硬拉","罗马尼亚硬拉"]},{"n":"相扑硬拉","en":"Sumo Deadlift","g":"腿","eq":"杠铃","p":"铰链","mus":"臀大肌、内收肌、股四头肌","cue":["站距宽，脚尖外展 45°","膝向外推，躯干更直立","锁定髋部"],"err":["膝内扣","起始时髋太高"],"alt":["传统硬拉","腿举"]},{"n":"臀桥","en":"Barbell Hip Thrust","g":"腿","eq":"杠铃","p":"铰链","mus":"臀大肌","cue":["上背靠凳，杠在髋部","顶到躯干与大腿成直线","顶点夹臀 1 秒"],"err":["腰部过伸代偿","下巴抬起"],"alt":["臀推","罗马尼亚硬拉"]},{"n":"单腿臀桥","en":"Single-leg Hip Thrust","g":"腿","eq":"自重","p":"铰链","mus":"臀大肌","cue":["单脚踩地，另一腿抬起","髋部水平顶起","顶端停 1 秒"],"err":["骨盆歪斜","腰部代偿"],"alt":["臀桥","保加利亚分腿蹲"]},{"n":"髋外展","en":"Hip Abduction","g":"腿","eq":"器械","p":"铰链","mus":"臀中肌","cue":["身体前倾练上臀","缓慢打开","控制回位"],"err":["用惯性弹开","幅度过大"],"alt":["侧向弹力带走","单腿臀桥"]},{"n":"站姿提踵","en":"Standing Calf Raise","g":"腿","eq":"器械","p":"蹲","mus":"腓肠肌","cue":["膝伸直","下放到脚跟低于踏板","顶端停 2 秒"],"err":["弹震","幅度太浅"],"alt":["坐姿提踵"]},{"n":"坐姿提踵","en":"Seated Calf Raise","g":"腿","eq":"器械","p":"蹲","mus":"比目鱼肌","cue":["膝屈 90°","全幅度","慢速多次数"],"err":["弹震","半程"],"alt":["站姿提踵"]},{"n":"壶铃摆荡","en":"Kettlebell Swing","g":"腿","eq":"其他","p":"铰链","mus":"臀大肌、腘绳肌、核心","cue":["髋铰链不是深蹲","壶铃荡到胸高","靠髋部爆发"],"err":["用手臂抬","腰部代偿"],"alt":["臀桥","罗马尼亚硬拉"]},{"n":"史密斯深蹲","en":"Smith Machine Squat","g":"腿","eq":"器械","p":"蹲","mus":"股四头肌","cue":["脚可前移减轻膝压","控制下蹲","背贴杠"],"err":["脚位太前变腿举","下放太快"],"alt":["深蹲","哈克深蹲"]},{"n":"实力推","en":"Overhead Press","g":"肩","eq":"杠铃","p":"推","mus":"三角肌前中束、肱三头肌","cue":["杠从锁骨起，垂直上推","核心收紧不后仰","头顶后锁定"],"err":["腰部过度后仰","推起绕头"],"alt":["哑铃肩推","器械肩推"]},{"n":"哑铃肩推","en":"Dumbbell Shoulder Press","g":"肩","eq":"哑铃","p":"推","mus":"三角肌前中束","cue":["哑铃在耳侧，肘略前","推起时手臂接近伸直","下放到耳垂高度"],"err":["下放太低伤肩","腰部反弓"],"alt":["实力推","阿诺德推举"]},{"n":"阿诺德推举","en":"Arnold Press","g":"肩","eq":"哑铃","p":"推","mus":"三角肌前中束","cue":["起始掌心朝自己","推起时旋转到掌心朝前","控制旋转节奏"],"err":["旋转过快","重量过大"],"alt":["哑铃肩推","侧平举"]},{"n":"侧平举","en":"Lateral Raise","g":"肩","eq":"哑铃","p":"推","mus":"三角肌中束","cue":["肘微屈，小指略高","抬到肩高即停","用肩带动，不耸肩"],"err":["耸肩","甩动身体"],"alt":["绳索侧平举","单臂侧平举"]},{"n":"绳索侧平举","en":"Cable Lateral Raise","g":"肩","eq":"绳索","p":"推","mus":"三角肌中束","cue":["绳索从身体后侧走","全程有张力","慢起慢放"],"err":["身体侧倾","耸肩"],"alt":["侧平举","器械侧平举"]},{"n":"前平举","en":"Front Raise","g":"肩","eq":"哑铃","p":"推","mus":"三角肌前束","cue":["抬到肩高","不要甩","控制下放"],"err":["借力","过高"],"alt":["哑铃肩推","绳索前平举"]},{"n":"俯身飞鸟","en":"Bent-over Reverse Fly","g":"肩","eq":"哑铃","p":"拉","mus":"三角肌后束","cue":["俯身 45°以上","肘微屈向两侧","小重量"],"err":["耸肩","重量过大变划船"],"alt":["面拉","反向蝴蝶机"]},{"n":"后束绳索 Y 举","en":"Cable Rear Delt Y Raise","g":"肩","eq":"绳索","p":"拉","mus":"三角肌后束、斜方肌下部","cue":["滑轮低位，双手交叉","沿 Y 字方向抬起","肩胛下沉再抬"],"err":["耸肩","幅度过大"],"alt":["面拉","俯身飞鸟"]},{"n":"直立划船","en":"Upright Row","g":"肩","eq":"杠铃","p":"拉","mus":"三角肌中束、斜方肌","cue":["宽握减少肩夹挤","拉到胸口高度","肘高于手"],"err":["窄握拉到下巴伤肩","甩动"],"alt":["侧平举","面拉"]},{"n":"器械肩推","en":"Machine Shoulder Press","g":"肩","eq":"器械","p":"推","mus":"三角肌","cue":["座椅高度对齐肩","推到位不锁死","控制回位"],"err":["座位太低","半程"],"alt":["哑铃肩推","实力推"]},{"n":"单臂哑铃侧平举","en":"Single-arm Lateral Raise","g":"肩","eq":"哑铃","p":"推","mus":"三角肌中束","cue":["一手扶架子","单侧控制更好","慢速"],"err":["身体倾斜借力"],"alt":["侧平举","绳索侧平举"]},{"n":"派克俯卧撑","en":"Pike Push-up","g":"肩","eq":"自重","p":"推","mus":"三角肌前束","cue":["臀部抬高成倒 V","头顶接近地面","肘向后"],"err":["变成普通俯卧撑","塌腰"],"alt":["哑铃肩推","实力推"]},{"n":"绳索面拉（高位）","en":"Cable Face Pull High","g":"肩","eq":"绳索","p":"拉","mus":"三角肌后束、肩袖","cue":["滑轮高于肩","拉向面部","外旋收尾"],"err":["耸肩","重量过大"],"alt":["面拉","俯身飞鸟"]},{"n":"杠铃弯举","en":"Barbell Curl","g":"臂","eq":"杠铃","p":"手臂","mus":"肱二头肌","cue":["肘固定在体侧","弯举到顶峰收缩","下放 2-3 秒"],"err":["甩腰借力","肘向前跑"],"alt":["哑铃弯举","绳索弯举"]},{"n":"哑铃弯举","en":"Dumbbell Curl","g":"臂","eq":"哑铃","p":"手臂","mus":"肱二头肌","cue":["可交替或同时","手腕中立","顶端不抬肩"],"err":["身体摆动","下放太快"],"alt":["杠铃弯举","锤式弯举"]},{"n":"锤式弯举","en":"Hammer Curl","g":"臂","eq":"哑铃","p":"手臂","mus":"肱肌、肱桡肌","cue":["掌心相对","肘贴身体","控制离心"],"err":["耸肩","借力"],"alt":["哑铃弯举","反握弯举"]},{"n":"牧师凳弯举","en":"Preacher Curl","g":"臂","eq":"杠铃","p":"手臂","mus":"肱二头肌下部","cue":["腋窝贴垫","下放到接近伸直","底部不完全锁死"],"err":["底部弹起","肘离垫"],"alt":["杠铃弯举","集中弯举"]},{"n":"绳索弯举","en":"Cable Curl","g":"臂","eq":"绳索","p":"手臂","mus":"肱二头肌","cue":["滑轮低位","全程有张力","顶峰挤 1 秒"],"err":["身体后仰","耸肩"],"alt":["杠铃弯举","哑铃弯举"]},{"n":"集中弯举","en":"Concentration Curl","g":"臂","eq":"哑铃","p":"手臂","mus":"肱二头肌（峰值）","cue":["坐姿，肘抵大腿内侧","慢速全程","顶端挤压"],"err":["借力","幅度小"],"alt":["牧师凳弯举","哑铃弯举"]},{"n":"斜托弯举","en":"Incline Curl","g":"臂","eq":"哑铃","p":"手臂","mus":"肱二头肌长头","cue":["靠背 45-60°","手臂自然下垂","拉伸位起举"],"err":["肩前移","甩动"],"alt":["哑铃弯举","牧师凳弯举"]},{"n":"反握弯举","en":"Reverse Curl","g":"臂","eq":"杠铃","p":"手臂","mus":"肱桡肌、前臂","cue":["掌心朝下","肘固定","小重量"],"err":["手腕下垂","借力"],"alt":["锤式弯举","腕弯举"]},{"n":"绳索下压","en":"Triceps Pushdown","g":"臂","eq":"绳索","p":"手臂","mus":"肱三头肌","cue":["肘贴身体固定","压到底伸直","回位到 90° 左右"],"err":["肘外展","身体压下去借力"],"alt":["窄距卧推","过顶臂屈伸"]},{"n":"过顶绳索臂屈伸","en":"Overhead Cable Extension","g":"臂","eq":"绳索","p":"手臂","mus":"肱三头肌长头","cue":["背对滑轮，肘朝前上方","下压到底","拉伸位充分"],"err":["肘外扩","腰部反弓"],"alt":["哑铃颈后臂屈伸","绳索下压"]},{"n":"仰卧臂屈伸","en":"Skull Crusher","g":"臂","eq":"杠铃","p":"手臂","mus":"肱三头肌","cue":["肘朝天花板固定","杠落到额头后上方","肘不晃"],"err":["肘外张","重量过大砸头"],"alt":["窄距卧推","绳索下压"]},{"n":"窄距卧推","en":"Close-grip Bench Press","g":"臂","eq":"杠铃","p":"推","mus":"肱三头肌、胸内侧","cue":["握距与肩同宽","肘贴近身体","下放到下胸"],"err":["握太窄手腕痛","肘外张"],"alt":["绳索下压","双杠臂屈伸"]},{"n":"双杠臂屈伸（三头版）","en":"Triceps Dip","g":"臂","eq":"自重","p":"推","mus":"肱三头肌","cue":["身体保持直立","肘向后不外张","下到肘 90°"],"err":["身体前倾变胸主导","下放太深"],"alt":["窄距卧推","凳上反屈伸"]},{"n":"哑铃颈后臂屈伸","en":"Overhead Dumbbell Extension","g":"臂","eq":"哑铃","p":"手臂","mus":"肱三头肌长头","cue":["双手捧铃举过头","肘朝前","下放到颈后"],"err":["肘外张","腰部反弓"],"alt":["过顶绳索臂屈伸","绳索下压"]},{"n":"凳上反屈伸","en":"Bench Dip","g":"臂","eq":"自重","p":"推","mus":"肱三头肌","cue":["手撑凳边，背对凳","肘向后弯","肩不适就减小幅度"],"err":["肩前顶","下放太深"],"alt":["双杠臂屈伸","绳索下压"]},{"n":"单臂绳索下压","en":"Single-arm Pushdown","g":"臂","eq":"绳索","p":"手臂","mus":"肱三头肌","cue":["单侧，肘固定","压到底","回位控制"],"err":["身体旋转借力"],"alt":["绳索下压","过顶臂屈伸"]},{"n":"腕弯举","en":"Wrist Curl","g":"臂","eq":"哑铃","p":"手臂","mus":"前臂屈肌","cue":["前臂搭在腿上","小幅慢速","多次数"],"err":["幅度过大","速度过快"],"alt":["反握弯举"]},{"n":"悬垂举腿","en":"Hanging Leg Raise","g":"核心","eq":"自重","p":"核心","mus":"腹直肌下部、髋屈肌","cue":["悬垂，骨盆后倾","腿抬到水平以上","控制下放不摆"],"err":["摆腿借力","只抬腿不收腹"],"alt":["悬垂举膝","绳索卷腹"]},{"n":"卷腹","en":"Crunch","g":"核心","eq":"自重","p":"核心","mus":"腹直肌","cue":["下背贴地","用腹肌卷起肩胛","呼气收紧"],"err":["用手拉脖子","靠惯性"],"alt":["反向卷腹","绳索卷腹"]},{"n":"反向卷腹","en":"Reverse Crunch","g":"核心","eq":"自重","p":"核心","mus":"腹直肌下部","cue":["膝盖拉向胸口","骨盆后倾卷起","控制下放"],"err":["用腿甩","腰部离地过多"],"alt":["悬垂举膝","卷腹"]},{"n":"平板支撑","en":"Plank","g":"核心","eq":"自重","p":"核心","mus":"腹横肌、核心整体","cue":["肘在肩下","身体成直线，髋不塌不翘","收紧臀和腹"],"err":["塌腰","憋气"],"alt":["侧平板","死虫"]},{"n":"侧平板","en":"Side Plank","g":"核心","eq":"自重","p":"核心","mus":"腹斜肌、臀中肌","cue":["肘在肩下","髋部顶高","身体成直线"],"err":["髋下沉","身体前倾"],"alt":["平板支撑","鸟狗"]},{"n":"俄罗斯转体","en":"Russian Twist","g":"核心","eq":"自重","p":"核心","mus":"腹斜肌","cue":["上身后倾 45°","转体带动手臂","脚可离地"],"err":["只动手臂不转体","弓背"],"alt":["绳索下砍","侧平板"]},{"n":"死虫","en":"Dead Bug","g":"核心","eq":"自重","p":"核心","mus":"核心稳定","cue":["下背贴地","对侧手脚同时伸","慢速呼吸"],"err":["腰部拱起","速度过快"],"alt":["鸟狗","平板支撑"]},{"n":"健腹轮","en":"Ab Wheel Rollout","g":"核心","eq":"其他","p":"核心","mus":"腹直肌、核心整体","cue":["跪姿起始","骨盆后倾再推出","推到能力边界即回"],"err":["塌腰","推太远起不来"],"alt":["平板支撑","绳索卷腹"]},{"n":"绳索卷腹","en":"Cable Crunch","g":"核心","eq":"绳索","p":"核心","mus":"腹直肌","cue":["跪姿，绳在头两侧","用腹肌卷曲","髋角固定"],"err":["用髋发力","拉脖子"],"alt":["卷腹","悬垂举腿"]},{"n":"仰卧举腿","en":"Lying Leg Raise","g":"核心","eq":"自重","p":"核心","mus":"腹直肌下部","cue":["下背贴地","腿抬到垂直","慢放不触地"],"err":["腰部拱起","甩腿"],"alt":["反向卷腹","悬垂举腿"]},{"n":"登山跑","en":"Mountain Climber","g":"核心","eq":"自重","p":"核心","mus":"核心、髋屈肌","cue":["手撑地肩在手腕上","膝盖交替快速收","髋不上下跳"],"err":["屁股抬高","速度乱"],"alt":["平板支撑","波比跳"]},{"n":"鸟狗","en":"Bird Dog","g":"核心","eq":"自重","p":"核心","mus":"核心稳定、竖脊肌","cue":["四足跪姿","对侧手脚伸直","骨盆保持水平"],"err":["骨盆歪","抬头过高"],"alt":["死虫","侧平板"]},{"n":"悬垂举膝","en":"Hanging Knee Raise","g":"核心","eq":"自重","p":"核心","mus":"腹直肌下部","cue":["悬垂不摆","膝盖收向胸口","控制下放"],"err":["摆动","只屈髋不收腹"],"alt":["悬垂举腿","反向卷腹"]},{"n":"反向山羊挺卷腹","en":"Reverse Hyper Crunch","g":"核心","eq":"器械","p":"核心","mus":"下背、腹直肌","cue":["稳定躯干","卷腹与伸髋结合","控制节奏"],"err":["腰部过伸","速度过快"],"alt":["山羊挺身","卷腹"]},{"n":"绳索下砍","en":"Cable Woodchopper","g":"核心","eq":"绳索","p":"核心","mus":"腹斜肌","cue":["对角线下砍","转体带动","核心收紧"],"err":["只用手臂","腰部代偿"],"alt":["俄罗斯转体","侧平板"]},{"n":"农夫行走","en":"Farmer's Walk","g":"全身","eq":"哑铃","p":"核心","mus":"握力、斜方肌、核心","cue":["挺胸站直","小步快走","肩胛下沉"],"err":["含胸驼背","憋气"],"alt":["推雪橇"]},{"n":"推雪橇","en":"Sled Push","g":"全身","eq":"其他","p":"推","mus":"股四头肌、臀、心肺","cue":["身体前倾 45°","小步快频","全程发力"],"err":["步子太大","腰部塌"],"alt":["农夫行走","波比跳"]},{"n":"波比跳","en":"Burpee","g":"全身","eq":"自重","p":"全身","mus":"全身、心肺","cue":["下蹲撑地","跳成平板再收腿","起身跳"],"err":["塌腰","省略俯卧撑段"],"alt":["登山跑","壶铃摆荡"]},{"n":"划船机","en":"Rowing Machine","g":"全身","eq":"器械","p":"拉","mus":"背、腿、心肺","cue":["腿-髋-手顺序发力","回桨手-髋-腿","保持节奏"],"err":["只用手臂","弓背"],"alt":["跑步机坡度走"]},{"n":"坡度走","en":"Incline Treadmill Walk","g":"全身","eq":"器械","p":"全身","mus":"臀、小腿、心肺","cue":["坡度 8-15%","速度 4-5.5 km/h","不扶扶手"],"err":["扶扶手减效","速度过快变跑"],"alt":["划船机","农夫行走"]}]};
+</script>
+<script>/* =========================================================
+   REPS 成长系统  ——  修为 / 境界 / 灵气 / 宠物
+   ---------------------------------------------------------
+   设计原则（跟着项目铁律走）：
+   1. 所有数值从真实训练记录算出来，不编造
+   2. 只升不降：断更不会掉级、宠物不会饿死
+      —— 这是陪伴型养成，不是绑架型的每日签到
+   3. 纯函数，不依赖 DOM，方便单测
+   ========================================================= */
+
+const GROW = (() => {
+
+  /* ---------- 基础换算 ---------- */
+
+  // 单组容量：重量 × 次数
+  const setVolume = (w, r) => (Number(w) || 0) * (Number(r) || 0);
+
+  // 一次训练的容量
+  function sessionVolume(s) {
+    if (!s || !Array.isArray(s.exercises)) return 0;
+    return s.exercises.reduce((sum, e) => {
+      if (!Array.isArray(e.sets)) return sum;
+      return sum + e.sets.reduce((a, x) => a + setVolume(x.w, x.r), 0);
+    }, 0);
+  }
+
+  // 累计总容量（吨），只算已完成训练
+  function totalTonnage(DB) {
+    const list = (DB && DB.sessions) || [];
+    const kg = list.reduce((a, s) => a + sessionVolume(s), 0);
+    return kg / 1000;
+  }
+
+  /* ---------- 境界 ----------
+     参考修仙体系，但门槛按真实训练量定：
+     一个认真练的人一年大约 150-300 吨，
+     所以最高境界留到多年以后才够得着，不让人一个月就"毕业"。
+  */
+  const REALMS = [
+    { name: '凡人',   need: 0,    icon: '·' },
+    { name: '练气',   need: 20,   icon: '气' },
+    { name: '筑基',   need: 60,   icon: '基' },
+    { name: '金丹',   need: 150,  icon: '丹' },
+    { name: '元婴',   need: 300,  icon: '婴' },
+    { name: '化神',   need: 550,  icon: '神' },
+    { name: '炼虚',   need: 900,  icon: '虚' },
+    { name: '合体',   need: 1400, icon: '合' },
+    { name: '大乘',   need: 2100, icon: '乘' },
+    { name: '渡劫',   need: 3000, icon: '劫' }
+  ];
+
+  function realmOf(tonnage) {
+    let idx = 0;
+    for (let i = 0; i < REALMS.length; i++) {
+      if (tonnage >= REALMS[i].need) idx = i;
+    }
+    const cur = REALMS[idx];
+    const next = REALMS[idx + 1] || null;
+    const span = next ? (next.need - cur.need) : 0;
+    const done = next ? (tonnage - cur.need) : 1;
+    const pct = next ? Math.max(0, Math.min(100, (done / span) * 100)) : 100;
+
+    return {
+      index: idx,
+      name: cur.name,
+      icon: cur.icon,
+      next: next ? next.name : null,
+      nextNeed: next ? next.need : null,
+      // 到下一个境界还差多少吨
+      remain: next ? Math.max(0, next.need - tonnage) : 0,
+      pct
+    };
+  }
+
+  /* ---------- 修为等级 ----------
+     每 5 吨一级，不封顶。境界有尽头，修为没有，
+     这样练到后面仍然能看到数字在涨。
+  */
+  const LEVEL_STEP = 5;
+
+  function levelOf(tonnage) {
+    const level = Math.floor(tonnage / LEVEL_STEP) + 1;
+    const into = tonnage % LEVEL_STEP;
+    return {
+      level,
+      into,
+      need: LEVEL_STEP,
+      pct: (into / LEVEL_STEP) * 100,
+      remain: LEVEL_STEP - into
+    };
+  }
+
+  /* ---------- 灵气 ----------
+     灵气由"这次训练的相对表现"产出：
+     基础 10 点 + 容量折算，一次高质量训练约 30-60 点。
+     灵气是消耗品，用来养宠物。
+  */
+  function qiFromSession(s) {
+    const vol = sessionVolume(s);
+    if (vol <= 0) return 0;
+    return Math.round(10 + vol / 150);
+  }
+
+  /* ---------- 连续训练 ----------
+     只用于展示，不参与惩罚。断更不清零宠物。
+  */
+  function streak(DB) {
+    const list = ((DB && DB.sessions) || [])
+      .map(s => new Date(s.date).setHours(0, 0, 0, 0))
+      .filter(t => !isNaN(t));
+    if (!list.length) return { days: 0, thisWeek: 0 };
+
+    const uniq = [...new Set(list)].sort((a, b) => b - a);
+    const day = 864e5;
+    const today = new Date().setHours(0, 0, 0, 0);
+
+    // 今天或昨天有训练才开始算连续
+    if (today - uniq[0] > day * 1.5) {
+      return { days: 0, thisWeek: countThisWeek(uniq, today) };
+    }
+
+    let days = 1;
+    for (let i = 1; i < uniq.length; i++) {
+      if (uniq[i - 1] - uniq[i] <= day * 1.5) days++;
+      else break;
+    }
+    return { days, thisWeek: countThisWeek(uniq, today) };
+  }
+
+  function countThisWeek(tsList, today) {
+    // 从本周一起算 7 天
+    const d = new Date(today);
+    const dow = (d.getDay() + 6) % 7;       // 周一=0
+    const monday = today - dow * 864e5;
+    return tsList.filter(t => t >= monday && t <= today).length;
+  }
+
+  /* ---------- 宠物 ----------
+     形态随"修为等级"进化，吃的灵气来自由训练兑换。
+     关键：饿了只是状态差，不会死、不会掉形态。
+  */
+  const PET_FORMS = [
+    { minLevel: 1,  name: '石灵',   desc: '一块会跟着你喘气的小石头' },
+    { minLevel: 5,  name: '炭精',   desc: '吸收了些热量，开始发光' },
+    { minLevel: 12, name: '火尾狐', desc: '尾巴上有火苗，跑得很快' },
+    { minLevel: 22, name: '雷纹豹', desc: '身上有电纹，蹲下会噼啪响' },
+    { minLevel: 35, name: '墨麒麟', desc: '据说只认练得狠的人' },
+    { minLevel: 50, name: '金乌',   desc: '它已经不需要你喂了，只是还想待着' }
+  ];
+
+  function petFormOf(level) {
+    let f = PET_FORMS[0];
+    for (const x of PET_FORMS) if (level >= x.minLevel) f = x;
+    return f;
+  }
+
+  // 宠物状态：由"当前灵气 / 上次喂食至今"决定，但永不为负
+  function petState(pet, now) {
+    const p = pet || { qi: 0, fed: 0, exp: 0 };
+    const qi = Math.max(0, p.qi || 0);
+    const daysSinceFed = p.fed ? Math.floor((now - p.fed) / 864e5) : 999;
+
+    let mood = '平静';
+    if (qi >= 100) mood = '亢奋';
+    else if (qi >= 40) mood = '有精神';
+    else if (qi <= 5) mood = '有点闷';
+
+    return {
+      qi,
+      mood,
+      hungry: qi < 20,
+      daysSinceFed,
+      // 永远不会低于 0，也不会因为饿而降形态
+      exp: Math.max(0, p.exp || 0)
+    };
+  }
+
+  /* ---------- 汇总 ---------- */
+  function summary(DB, now) {
+    const t = totalTonnage(DB);
+    const realm = realmOf(t);
+    const level = levelOf(t);
+    const st = streak(DB);
+    const pet = petState(DB && DB.pet, now || Date.now());
+    const form = petFormOf(level.level);
+
+    return {
+      tonnage: t,
+      tonnageText: t >= 1000 ? (t / 1000).toFixed(2) + ' 千吨' : t.toFixed(1) + ' 吨',
+      realm, level, streak: st, pet, form,
+      totalSessions: ((DB && DB.sessions) || []).length
+    };
+  }
+  /* =========================================================
+     音乐通感  ——  听歌也能养灵兽
+     ---------------------------------------------------------
+     规则（和用户定过的）：
+     1. **只进宠物，不进修为**。修为/境界只能靠真实吨位，
+        练出来的是身体，听歌换不来。这条不能松。
+     2. **每日封顶 60 分钟**。超过的部分只记录时长、不产资源，
+        放一晚循环不会把数值刷爆。
+     3. 训练中听比平时听值钱（3 倍）—— 边练边听本来就该更值。
+     4. 产出的是「陪伴值」，不是灵气。灵气是训练专用的货币，
+        两种来源混在一个池子里会让"灵气不够就少练点"变成
+        "灵气不够就多听点歌"，那就本末倒置了。
+     ========================================================= */
+
+  const MUSIC_DAILY_CAP_SEC = 60 * 60;   // 每日计入的播放时长上限
+  const MUSIC_QI_PER_MIN    = 1.2;       // 每分钟基础陪伴值
+  const MUSIC_TRAIN_MULT    = 3;         // 训练中听的倍率
+
+  // yyyy-mm-dd（本地时区），当作每日封顶的桶
+  function dayKey(ts) {
+    const d = new Date(ts);
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  /* 算这一批播放该给多少陪伴值。
+     entry = { day, seconds, training }   seconds 是「本次新增的秒数」
+     usedToday = 这一天已经计入过的秒数（不含本次）
+     返回 { counted, wasted, bond } —— wasted 是被日封顶吃掉的部分 */
+  function musicBond(entry, usedToday) {
+    const sec = Math.max(0, Number(entry && entry.seconds) || 0);
+    const used = Math.max(0, Number(usedToday) || 0);
+    const room = Math.max(0, MUSIC_DAILY_CAP_SEC - used);
+    const counted = Math.min(sec, room);
+    const wasted = sec - counted;
+
+    const mult = (entry && entry.training) ? MUSIC_TRAIN_MULT : 1;
+    // 先乘倍率再按分钟折算；不足一分钟也按比例给，别把小段丢掉
+    const bond = (counted / 60) * MUSIC_QI_PER_MIN * mult;
+
+    return {
+      counted,
+      wasted,
+      bond: Math.round(bond * 10) / 10      // 保留一位小数，前端好显示
+    };
+  }
+
+  /* 这一天还能听多久才封顶 */
+  function musicRoomLeft(usedToday) {
+    return Math.max(0, MUSIC_DAILY_CAP_SEC - Math.max(0, Number(usedToday) || 0));
+  }
+
+  /* 把一次播放写进 DB（就地修改）。返回本次结算结果，
+     前端拿它弹提示：「+2.4 陪伴值 · 今日还剩 41 分钟」 */
+  function addMusicListen(DB, opts) {
+    if (!DB) return null;
+    const now = (opts && opts.now) || Date.now();
+    const key = dayKey(now);
+
+    if (!DB.musicBond) DB.musicBond = { total: 0, days: {}, lifetimeSec: 0 };
+    if (!DB.musicBond.days) DB.musicBond.days = {};
+
+    const days = DB.musicBond.days;
+    const day = days[key] || (days[key] = { sec: 0, bond: 0, trainSec: 0 });
+
+    const r = musicBond(
+      { seconds: opts && opts.seconds, training: opts && opts.training },
+      day.sec
+    );
+
+    day.sec += r.counted;
+    day.bond += r.bond;
+    if (opts && opts.training) day.trainSec += r.counted;
+
+    DB.musicBond.total = Math.round((DB.musicBond.total + r.bond) * 10) / 10;
+    DB.musicBond.lifetimeSec += r.counted;
+
+    return Object.assign({ day: key, usedToday: day.sec, roomLeft: musicRoomLeft(day.sec) }, r);
+  }
+
+  /* 某一天的播放统计，给界面用 */
+  function musicToday(DB, now) {
+    const key = dayKey(now || Date.now());
+    const day = (DB && DB.musicBond && DB.musicBond.days && DB.musicBond.days[key]) || null;
+    const total = (DB && DB.musicBond && DB.musicBond.total) || 0;
+    return {
+      day: key,
+      sec: day ? day.sec : 0,
+      bond: day ? Math.round(day.bond * 10) / 10 : 0,
+      trainSec: day ? day.trainSec : 0,
+      total: Math.round(total * 10) / 10,
+      capSec: MUSIC_DAILY_CAP_SEC,
+      roomLeft: musicRoomLeft(day ? day.sec : 0),
+      capped: !!day && day.sec >= MUSIC_DAILY_CAP_SEC
+    };
+  }
+
+  /* 陪伴值参与宠物状态：影响心情，但不改形态。
+     形态仍然只由修为等级决定 —— 不然听歌能进化，训练就没意义了。 */
+  function petMoodWith(DB, pet, now) {
+    const base = petState(pet, now);
+    const m = musicToday(DB, now);
+
+    /* 心情四档：亢奋 > 有精神 > 平静 > 有点闷。
+       陪伴值越高，心情下限越高 —— 而不是只在「平静」上做加法。
+       原来的写法只处理平静/有精神，导致灵气为 0 的宠物即使
+       听满一小时也还是「有点闷」，那听歌就白听了。 */
+    const LEVELS = ['有点闷', '平静', '有精神', '亢奋'];
+    const bondFloor = m.bond >= 40 ? 2      // 听得多，至少「有精神」
+                    : m.bond >= 12 ? 1      // 听了一会儿，至少「平静」
+                    : 0;
+    const baseIdx = Math.max(0, LEVELS.indexOf(base.mood));
+    const idx = Math.min(LEVELS.length - 1, Math.max(baseIdx, bondFloor));
+
+    base.mood = LEVELS[idx];
+    base.bond = m.bond;
+    base.bondTotal = m.total;
+    return base;
+  }
+
+  return {
+    setVolume, sessionVolume, totalTonnage,
+    REALMS, LEVEL_STEP, PET_FORMS,
+    realmOf, levelOf, qiFromSession, streak, petFormOf, petState, summary,
+    MUSIC_DAILY_CAP_SEC, MUSIC_QI_PER_MIN, MUSIC_TRAIN_MULT,
+    dayKey, musicBond, musicRoomLeft, addMusicListen, musicToday, petMoodWith
+  };
+})();
+
+// Node 单测用；浏览器里 module 未定义，跳过
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = GROW;
+} else if (typeof window !== 'undefined') {
+  window.GROW = GROW;   // 同时挂到 window，便于外部访问与调试
+}
+</script>
+<script>/* =========================================================
+   REPS 单文件版 · 主应用逻辑
+   依赖注入的全局：window.MOVES（动作库）、window.GROW（成长算法）
+   设计铁律：所有数值来自真实记录或真实计算，不编造、不用假进度条。
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const KEY = 'reps.v2';
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- 状态 ---------- */
+  let DB, CUR_TAB = 'train';
+  let restTimer = null, restRemaining = 0, restTotal = 0, restRunning = false, curEx = null;
+  let mvGroup = '全部', mvQuery = '';
+  let audioEl = null, audioObjURL = null, audioTimer = null;
+
+  // 消除浏览器自动请求 /favicon.ico 导致的 404（内联空图标，不产生网络请求）
+  (function () {
+    var l = document.createElement('link');
+    l.rel = 'icon'; l.href = 'data:,';
+    document.head.appendChild(l);
+  })();
+
+  // DOM 句柄（init 时赋值）
+  let moveSel, exName, restChips, wInput, rInput, addSetBtn, skipRestBtn,
+      restBox, restTime, restState, setList, trainMsg,
+      statsBody, growBody, petBody, dataMsg, exportBtn, importBtn, importFile,
+      movesBody, groupFilter, moveSearch,
+      sexSel, ageInput, hInput, wBodyInput, actSel, saveBodyBtn, bodyMsg, bodyMetrics,
+      audioBar, audioName, playBtn, seek, audioTime, bondMsg, audioFile, audioMsg, today;
+
+  /* ---------- 工具 ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  let toastTimer = null;
+  function toast(msg, err) {
+    let t = document.querySelector('.toast');
+    if (!t) { t = document.createElement('div'); document.body.appendChild(t); }
+    t.textContent = msg;
+    t.className = 'toast' + (err ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.remove(), 2600);
+  }
+  function fmt(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+  function petFace(name) {
+    return ({ '石灵': '🪨', '炭精': '🔥', '火尾狐': '🦊', '雷纹豹': '⚡', '墨麒麟': '🐉', '金乌': '🦅' })[name] || '🪨';
+  }
+
+  /* ---------- 存储（逐字段校验，坏字段单独回退，不丢整份） ---------- */
+  function defDB() { return { sessions: [], cur: null, pet: { qi: 0, fed: 0, exp: 0 }, musicBond: {}, profile: {} }; }
+  function validSession(s) {
+    return s && typeof s === 'object' && Array.isArray(s.exercises) &&
+      s.exercises.every((e) => e && typeof e === 'object' && Array.isArray(e.sets));
+  }
+  function sanitizeSession(s) {
+    const ex = (s.exercises || []).filter((e) => e && Array.isArray(e.sets))
+      .map((e) => ({ name: e.name, sets: e.sets.filter((x) => x && (x.w > 0 || x.r > 0)).map((x) => ({ w: +x.w || 0, r: +x.r || 0 })) }));
+    return { date: s.date || new Date().toISOString(), exercises: ex };
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return defDB();
+      const d = JSON.parse(raw);
+      const db = defDB();
+      if (d && Array.isArray(d.sessions)) db.sessions = d.sessions.filter(validSession).map(sanitizeSession);
+      if (d && d.cur && typeof d.cur === 'object') db.cur = sanitizeSession(d.cur);
+      if (d && d.pet && typeof d.pet === 'object') db.pet = Object.assign({ qi: 0, fed: 0, exp: 0 }, d.pet);
+      if (d && d.musicBond && typeof d.musicBond === 'object') db.musicBond = d.musicBond;
+      if (d && d.profile && typeof d.profile === 'object') db.profile = Object.assign({}, d.profile);
+      return db;
+    } catch (e) { return defDB(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(DB)); }
+    catch (e) { toast('浏览器不让存数据，请用「导出数据」备份', true); }
+  }
+
+  /* ---------- 组间休息档位（按动作真实定档） ---------- */
+  function restFor(name) {
+    if (/深蹲/.test(name)) return 180;
+    if (/卧推/.test(name)) return 120;
+    if (/侧平举/.test(name)) return 90;
+    if (/弯举/.test(name)) return 60;
+    return 120;
+  }
+
+  /* =======================================================
+     训练
+     ======================================================= */
+  function ensureCur(name) {
+    if (!DB.cur) DB.cur = { date: new Date().toISOString(), exercises: [] };
+    let ex = DB.cur.exercises[DB.cur.exercises.length - 1];
+    if (!ex || ex.name !== name) { ex = { name, sets: [] }; DB.cur.exercises.push(ex); }
+    curEx = ex;
+    return ex;
+  }
+  function pickExercise(name) {
+    moveSel.value = name;
+    ensureCur(name);
+    renderTrain();
+  }
+  function addSet() {
+    const name = moveSel.value;
+    if (!name) { showTrainMsg('先选一个动作', 'err'); return; }
+    const w = parseFloat(wInput.value), r = parseFloat(rInput.value);
+    wInput.classList.toggle('invalid', !(w > 0));
+    rInput.classList.toggle('invalid', !(r > 0));
+    if (!(w > 0) || !(r > 0)) { showTrainMsg('重量和次数都要大于 0', 'err'); return; }
+    const ex = ensureCur(name);
+    ex.sets.push({ w, r });
+    save();
+    startRest(restFor(name));
+    renderTrain();
+    showTrainMsg(`已加第 ${ex.sets.length} 组 · ${w}×${r}`, 'ok');
+    // 修复(2026-10-28)：保留本次重量/次数，连续同重量加组无需重填
+    wInput.value = String(w); rInput.value = String(r);
+    wInput.focus();
+  }
+  function startRest(sec) {
+    restTotal = sec; restRemaining = sec; restRunning = true;
+    restBox.hidden = false; skipRestBtn.disabled = false;
+    renderRest();
+    if (restTimer) clearInterval(restTimer);
+    restTimer = setInterval(() => {
+      restRemaining--;
+      if (restRemaining <= 0) {
+        clearInterval(restTimer); restTimer = null; restRunning = false;
+        restState.textContent = '休息结束，开始下一组';
+        skipRestBtn.disabled = true;
+        beep();
+        toast('休息结束，开始下一组');
+      }
+      renderRest();
+    }, 1000);
+  }
+  function skipRest() {
+    if (!restRunning) return;
+    if (restTimer) { clearInterval(restTimer); restTimer = null; }
+    restRunning = false; restBox.hidden = true; skipRestBtn.disabled = true;
+    toast('已跳过休息');
+  }
+  function finishSession() {
+    if (!DB.cur || !DB.cur.exercises.length ||
+        DB.cur.exercises.every((e) => !e.sets.length)) {
+      showTrainMsg('还没有记录，先练一组', 'err'); return;
+    }
+    const totalSets = DB.cur.exercises.reduce((a, e) => a + e.sets.length, 0);
+    DB.sessions.push(DB.cur);
+    DB.cur = null; curEx = null;
+    if (restTimer) { clearInterval(restTimer); restTimer = null; }
+    restRunning = false; restBox.hidden = true; skipRestBtn.disabled = true;
+    save();
+    renderTrain();
+    toast(`已保存 ${totalSets} 组训练`);
+    switchTab('stats');
+  }
+  function showTrainMsg(msg, type) {
+    trainMsg.innerHTML = type === 'err'
+      ? `<div class="state-error">${esc(msg)}</div>`
+      : `<div class="state-empty" style="border-color:#7CFC00;color:#d6ffb0">${esc(msg)}</div>`;
+  }
+  function renderRest() {
+    if (!restRunning) {
+      restTime.textContent = '0';
+      restState.textContent = restTotal ? `上次休息 ${restTotal}s` : '未开始休息';
+      return;
+    }
+    restTime.textContent = restRemaining;
+    restState.textContent = `休息中 · 剩 ${restRemaining}s / 共 ${restTotal}s`;
+  }
+  function renderTrain() {
+    const name = moveSel.value;
+    exName.textContent = name ||
+      (DB.cur && DB.cur.exercises.length ? DB.cur.exercises[DB.cur.exercises.length - 1].name : '未选择');
+    if (name) {
+      const rec = restFor(name);
+      const opts = [60, 90, 120, 180];
+      restChips.innerHTML = opts.map((s) =>
+        `<button class="chip ${s === rec ? 'on' : ''}" data-rest="${s}">${s}s</button>`).join('');
+      restChips.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+        restChips.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === c));
+        if (restRunning) startRest(+c.dataset.rest);
+        else restTotal = +c.dataset.rest;
+      }));
+    } else { restChips.innerHTML = ''; }
+
+    if (!DB.cur || !DB.cur.exercises.length) {
+      setList.innerHTML = '<li class="state-empty" style="border:none">还没有组，录入重量和次数后点「加一组」</li>';
+    } else {
+      let html = '';
+      for (const e of DB.cur.exercises) {
+        html += `<li style="border:none;font-size:12px;color:#9a9ab0">${esc(e.name)} · ${e.sets.length} 组</li>`;
+        e.sets.forEach((s, i) => { html += `<li><span>#${i + 1}</span><span>${s.w} kg × ${s.r}</span></li>`; });
+      }
+      setList.innerHTML = html;
+    }
+    renderRest();
+  }
+
+  /* =======================================================
+     进度
+     ======================================================= */
+  function renderStats() {
+    if (!DB.sessions.length) {
+      statsBody.innerHTML = '<div class="state-empty">还没有记录，去「训练」页练一组吧</div>';
+      return;
+    }
+    const map = {};
+    let weekVol = 0;
+    const now = Date.now(), weekAgo = now - 7 * 864e5;
+    for (const s of DB.sessions) {
+      const sd = new Date(s.date).getTime();
+      if (!isNaN(sd) && sd >= weekAgo) weekVol += GROW.sessionVolume(s);
+      for (const e of s.exercises) {
+        const m = map[e.name] || (map[e.name] = { name: e.name, sets: 0, lastW: 0, lastR: 0, vol: 0 });
+        m.sets += e.sets.length;
+        const last = e.sets[e.sets.length - 1];
+        if (last) { m.lastW = last.w; m.lastR = last.r; }
+        m.vol += e.sets.reduce((a, x) => a + GROW.setVolume(x.w, x.r), 0);
+      }
+    }
+    let html = `<div class="spread"><span class="meta">已完成训练</span><span class="big-num">${DB.sessions.length}</span></div>`;
+    html += `<div class="spread"><span class="meta">近 7 天容量</span><span class="big-num">${weekVol} kg</span></div>`;
+    const names = Object.keys(map);
+    if (!names.length) { html += '<div class="state-empty">动作记录为空</div>'; }
+    for (const k of names) {
+      const m = map[k];
+      const adv = m.lastW ? `上次 ${m.lastW}×${m.lastR}，下次试试加 2.5–5kg 或 +1 次` : '开始你的第一次';
+      html += `<div class="excard"><div class="nm">${esc(m.name)}</div>` +
+        `<div class="meta">累计 ${m.sets} 组 · 容量 ${m.vol} kg</div>` +
+        `<div class="adv">建议：${esc(adv)}</div></div>`;
+    }
+    statsBody.innerHTML = html;
+  }
+
+  /* =======================================================
+     成长 + 灵兽
+     ======================================================= */
+  function renderGrow() {
+    const s = GROW.summary(DB, Date.now());
+    growBody.innerHTML =
+      `<div class="spread"><span class="meta">总容量</span><span class="big-num">${s.tonnageText}</span></div>` +
+      `<div class="spread"><span class="meta">境界</span><span class="big-num">${s.realm.icon} ${s.realm.name}</span></div>` +
+      (s.realm.next
+        ? `<div class="meta">距 ${s.realm.next} 还差 ${s.realm.remain} 吨</div><div class="bar-track"><div class="bar-fill" style="width:${s.realm.pct}%"></div></div>`
+        : '<div class="meta">已达最高境界</div>') +
+      `<div class="spread"><span class="meta">修为等级</span><span class="big-num">Lv.${s.level.level}</span></div>` +
+      `<div class="spread"><span class="meta">连续训练</span><span>${s.streak.days} 天 · 本周 ${s.streak.thisWeek} 次</span></div>`;
+
+    const pet = GROW.petMoodWith(DB, DB.pet, Date.now());
+    petBody.innerHTML =
+      `<div class="pet"><div class="face">${petFace(s.form.name)}</div>` +
+      `<div class="pname">${s.form.name}</div>` +
+      `<div class="pmood">${esc(s.form.desc)}</div>` +
+      `<div class="pmood">心情：${esc(pet.mood)} · 今日陪伴 ${pet.bond || 0}</div></div>`;
+  }
+
+  /* =======================================================
+     动作库
+     ======================================================= */
+  function renderMoves() {
+    movesBody.innerHTML = '<div class="state-loading">加载中…加载动作库</div>';
+    setTimeout(() => {
+      const all = (window.MOVES && window.MOVES.moves) || [];
+      const list = all.filter((m) => {
+        if (mvGroup !== '全部' && m.g !== mvGroup) return false;
+        if (mvQuery) {
+          const q = mvQuery.toLowerCase();
+          return (m.n + (m.en || '') + m.g + m.eq + m.p + (m.mus || '')).toLowerCase().includes(q);
+        }
+        return true;
+      });
+      if (!list.length) {
+        movesBody.innerHTML = `<div class="state-empty">没有匹配「${esc(mvQuery)}」的动作</div>`;
+        return;
+      }
+      let html = '';
+      for (const m of list) {
+        const cue = (m.cue || []).slice(0, 1).join('；');
+        html += `<div class="mcard"><div class="mn">${esc(m.n)}</div>` +
+          `<div class="men">${esc(m.en || '')}</div>` +
+          `<div class="mtags">${esc(m.g)} · ${esc(m.eq)} · ${esc(m.p)}</div>` +
+          (cue ? `<div class="mcue">要点：${esc(cue)}</div>` : '') +
+          `<button class="pickBtn" data-move="${esc(m.n)}">练这个</button></div>`;
+      }
+      movesBody.innerHTML = html;
+      movesBody.querySelectorAll('.pickBtn').forEach((b) => b.addEventListener('click', () => {
+        pickExercise(b.dataset.move);
+        switchTab('train');
+        toast('已选 ' + b.dataset.move);
+      }));
+    }, 30);
+  }
+
+  /* =======================================================
+     身体数据（真实 BMI / BMR / 每日消耗）
+     ======================================================= */
+  function renderBody() {
+    const p = DB.profile || {};
+    if (p.sex) sexSel.value = p.sex;
+    if (p.age) ageInput.value = p.age;
+    if (p.h) hInput.value = p.h;
+    if (p.w) wBodyInput.value = p.w;
+    if (p.act) actSel.value = String(p.act);
+    if (p.h && p.w) computeBody(true);
+  }
+  function computeBody(silent) {
+    const sex = sexSel.value, age = +ageInput.value, h = +hInput.value, w = +wBodyInput.value, act = +actSel.value;
+    [hInput, wBodyInput, ageInput].forEach((i) => i.classList.remove('invalid'));
+    let bad = false;
+    if (!(h >= 100 && h <= 250)) { hInput.classList.add('invalid'); bad = true; }
+    if (!(w >= 30 && w <= 300)) { wBodyInput.classList.add('invalid'); bad = true; }
+    if (!(age >= 10 && age <= 120)) { ageInput.classList.add('invalid'); bad = true; }
+    if (bad) {
+      bodyMsg.innerHTML = '<div class="state-error">身高需在 100–250cm、体重 30–300kg、年龄 10–120 之间</div>';
+      bodyMetrics.innerHTML = '';
+      return;
+    }
+    const bmi = w / Math.pow(h / 100, 2);
+    const lo = 18.5 * Math.pow(h / 100, 2), hi = 24 * Math.pow(h / 100, 2);
+    const bmr = sex === 'm' ? (10 * w + 6.25 * h - 5 * age + 5) : (10 * w + 6.25 * h - 5 * age - 161);
+    const tdee = bmr * act;
+    const cat = bmi < 18.5 ? '偏瘦' : (bmi < 24 ? '正常' : (bmi < 28 ? '超重' : '肥胖'));
+    const advice = cat === '偏瘦' ? '热量盈余 +300 kcal' : (cat === '正常' ? '维持当前' : '先控体脂再谈增肌');
+    DB.profile = { sex, age, h, w, act };
+    save();
+    if (!silent) toast('已保存并计算');
+    bodyMsg.innerHTML = '<div class="state-empty" style="border-color:#7CFC00;color:#d6ffb0">已保存 · ' + cat + '（' + advice + '）</div>';
+    bodyMetrics.innerHTML =
+      `<div class="metric"><div class="k">BMI</div><div class="v">${bmi.toFixed(1)} ${cat}</div></div>` +
+      `<div class="metric"><div class="k">理想体重</div><div class="v">${lo.toFixed(0)}–${hi.toFixed(0)}kg</div></div>` +
+      `<div class="metric"><div class="k">基础代谢 BMR</div><div class="v">${Math.round(bmr)} kcal</div></div>` +
+      `<div class="metric"><div class="k">每日消耗</div><div class="v">${Math.round(tdee)} kcal</div></div>`;
+  }
+
+  /* =======================================================
+     音乐（导入本地音频，真实播放 + 真实陪伴值累计）
+     ======================================================= */
+  let actx = null;
+  function beep() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.connect(g); g.connect(actx.destination); o.type = 'square'; o.frequency.value = 880;
+      const t0 = actx.currentTime;
+      g.gain.setValueAtTime(0.001, t0);
+      g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.25);
+      o.start(); o.stop(t0 + 0.26);
+    } catch (e) { /* 自动播放限制下静默失败，不影响主流程 */ }
+  }
+  function onAudioFile(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    audioMsg.innerHTML = '<div class="state-loading">加载中…正在读取文件</div>';
+    if (audioObjURL) URL.revokeObjectURL(audioObjURL);
+    audioObjURL = URL.createObjectURL(f);
+    if (!audioEl) {
+      audioEl = new Audio();
+      audioEl.addEventListener('timeupdate', onTime);
+      audioEl.addEventListener('ended', onEnded);
+      audioEl.addEventListener('error', () => {
+        audioMsg.innerHTML = '<div class="state-error">无法播放该文件，请换一个音频格式（mp3/wav/ogg）</div>';
+      });
+    }
+    audioEl.src = audioObjURL;
+    audioName.textContent = f.name;
+    audioBar.classList.add('on');
+    audioEl.load();
+    audioEl.addEventListener('loadedmetadata', () => {
+      seek.max = Math.floor(audioEl.duration) || 100;
+      audioMsg.innerHTML = '';
+    }, { once: true });
+  }
+  function playPause() {
+    if (!audioEl || !audioEl.src) { audioMsg.innerHTML = '<div class="state-error">请先导入一首本地音乐</div>'; return; }
+    if (audioEl.paused) {
+      audioEl.play().then(() => {
+        playBtn.textContent = '❚❚ 暂停';
+        if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+        if (actx && actx.state === 'suspended') actx.resume();
+        startAccrue();
+      }).catch(() => {
+        audioMsg.innerHTML = '<div class="state-error">播放失败（浏览器可能限制了自动播放，请再点一次）</div>';
+      });
+    } else {
+      pauseAccrue(); audioEl.pause(); playBtn.textContent = '▶ 播放';
+    }
+  }
+  function startAccrue() {
+    if (audioTimer) clearInterval(audioTimer);
+    audioTimer = setInterval(() => {
+      if (audioEl && !audioEl.paused) {
+        const r = GROW.addMusicListen(DB, { seconds: 1, training: !!restRunning, now: Date.now() });
+        if (r && r.wasted > 0) bondMsg.textContent = '今日陪伴已封顶（60 分钟），多听不再计入';
+        else bondMsg.textContent = '陪伴值 +' + (r ? r.bond : 0) + ' · 今日已听 ' + GROW.musicToday(DB).sec + 's';
+        save();
+      }
+    }, 1000);
+  }
+  function pauseAccrue() { if (audioTimer) { clearInterval(audioTimer); audioTimer = null; } }
+  function onTime() {
+    if (!audioEl || !audioEl.duration) return;
+    seek.value = Math.floor(audioEl.currentTime);
+    audioTime.textContent = fmt(audioEl.currentTime) + ' / ' + fmt(audioEl.duration);
+  }
+  function onSeek() { if (audioEl && audioEl.duration) audioEl.currentTime = +seek.value; }
+  function onEnded() { playBtn.textContent = '▶ 播放'; pauseAccrue(); }
+
+  /* =======================================================
+     数据备份（导出 / 导入 JSON）
+     ======================================================= */
+  function exportData() {
+    dataMsg.innerHTML = '<div class="state-loading">导出中…</div>';
+    setTimeout(() => {
+      const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'reps-data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      dataMsg.innerHTML = '<div class="state-empty" style="border-color:#7CFC00;color:#d6ffb0">已导出 reps-data.json</div>';
+    }, 30);
+  }
+  function onImportFile(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    dataMsg.innerHTML = '<div class="state-loading">导入中…正在解析</div>';
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const d = JSON.parse(rd.result);
+        if (!d || !Array.isArray(d.sessions)) throw new Error('缺少 sessions 字段');
+        DB = Object.assign(defDB(), d);
+        save();
+        renderGrow(); renderStats();
+        dataMsg.innerHTML = `<div class="state-empty" style="border-color:#7CFC00;color:#d6ffb0">已导入 ${DB.sessions.length} 次训练</div>`;
+      } catch (err) {
+        dataMsg.innerHTML = '<div class="state-error">导入失败：' + esc(err.message) + '</div>';
+      }
+    };
+    rd.onerror = () => { dataMsg.innerHTML = '<div class="state-error">读取文件失败</div>'; };
+    rd.readAsText(f);
+  }
+
+  /* =======================================================
+     Tab 切换
+     ======================================================= */
+  function switchTab(name) {
+    CUR_TAB = name;
+    document.querySelectorAll('section.tab').forEach((s) => s.classList.toggle('on', s.id === 'tab-' + name));
+    document.querySelectorAll('nav.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+    if (name === 'stats') renderStats();
+    if (name === 'grow') renderGrow();
+    if (name === 'moves') renderMoves();
+    if (name === 'body') renderBody();
+    if (name === 'train') renderTrain();
+  }
+
+  /* =======================================================
+     初始化
+     ======================================================= */
+  function init() {
+    DB = load();
+
+    // 动作下拉
+    moveSel = $('moveSel');
+    const opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = '— 选择动作 —';
+    moveSel.appendChild(opt0);
+    const allMoves = (window.MOVES && window.MOVES.moves) || [];
+    for (const m of allMoves) {
+      const o = document.createElement('option'); o.value = m.n; o.textContent = m.n;
+      moveSel.appendChild(o);
+    }
+
+    // 部位筛选
+    groupFilter = $('groupFilter');
+    const groups = ['全部'].concat((window.MOVES && window.MOVES.groups) || []);
+    groupFilter.innerHTML = groups.map((g) =>
+      `<button class="chip ${g === '全部' ? 'on' : ''}" data-g="${esc(g)}">${esc(g)}</button>`).join('');
+    groupFilter.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+      mvGroup = c.dataset.g;
+      groupFilter.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === c));
+      renderMoves();
+    }));
+
+    // 其余句柄
+    exName = $('exName'); restChips = $('restChips');
+    wInput = $('wInput'); rInput = $('rInput');
+    addSetBtn = $('addSetBtn'); skipRestBtn = $('skipRestBtn');
+    restBox = $('restBox'); restTime = $('restTime'); restState = $('restState');
+    setList = $('setList'); trainMsg = $('trainMsg');
+    statsBody = $('statsBody'); growBody = $('growBody'); petBody = $('petBody');
+    dataMsg = $('dataMsg'); exportBtn = $('exportBtn'); importBtn = $('importBtn'); importFile = $('importFile');
+    movesBody = $('movesBody'); moveSearch = $('moveSearch');
+    sexSel = $('sexSel'); ageInput = $('ageInput'); hInput = $('hInput');
+    wBodyInput = $('wBodyInput'); actSel = $('actSel'); saveBodyBtn = $('saveBodyBtn');
+    bodyMsg = $('bodyMsg'); bodyMetrics = $('bodyMetrics');
+    audioBar = $('audioBar'); audioName = $('audioName'); playBtn = $('playBtn');
+    seek = $('seek'); audioTime = $('audioTime'); bondMsg = $('bondMsg');
+    audioFile = $('audioFile'); audioMsg = $('audioMsg'); today = $('today');
+
+    today.textContent = new Date().toLocaleDateString('zh-CN');
+
+    // 事件
+    moveSel.addEventListener('change', () => { if (moveSel.value) pickExercise(moveSel.value); });
+    addSetBtn.addEventListener('click', addSet);
+    skipRestBtn.addEventListener('click', skipRest);
+    finishBtn0().addEventListener('click', finishSession);
+    playBtn.addEventListener('click', playPause);
+    audioFile.addEventListener('change', onAudioFile);
+    seek.addEventListener('input', onSeek);
+    saveBodyBtn.addEventListener('click', () => computeBody(false));
+    exportBtn.addEventListener('click', exportData);
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', onImportFile);
+    moveSearch.addEventListener('input', () => { mvQuery = moveSearch.value.trim(); renderMoves(); });
+    document.querySelectorAll('nav.tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && restRunning) skipRest(); });
+
+    switchTab('train');
+    renderTrain();
+  }
+  function finishBtn0() { return $('finishBtn'); }
+
+  if (document.readyState !== 'loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+/* ===== 响应式：小屏微调 ===== */
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+  .rest-time { font-size: 34px; }
+  nav.tabs button { font-size: 10px; }
+  nav.tabs .ic { font-size: 16px; }
+}

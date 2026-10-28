@@ -1,0 +1,45 @@
+/* ===== REPS 单文件版 · 像素风样式 ===== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: ui-monospace, "SFMono-Regular", "Courier New", monospace;
+  background: #0d0d12;
+  color: #e8e8f0;
+  -webkit-text-size-adjust: 100%;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-x: hidden;            /* 杜绝横向滚动 */
+}
+img { image-rendering: pixelated; }
+
+/* 主容器：居中、限宽，内容超出走纵向滚动 */
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+header.bar {
+  padding: 10px 12px 8px;
+  border-bottom: 3px solid #2a2a3a;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+header.bar h1 {
+  font-size: 18px; margin: 0; letter-spacing: 2px;
+  color: #7CFC00;
+  text-shadow: 2px 2px 0 #1a3a00;
+}
+header.bar .today { font-size: 11px; color: #8a8aa0; margin-left: auto; }
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 84px;       /* 给固定底栏留位 */
+}
+section.tab { display: none; }
+section.tab.on { display: block; }
+

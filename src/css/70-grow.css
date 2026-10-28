@@ -1,0 +1,9 @@
+/* ===== 成长页 ===== */
+.big-num { font-size: 30px; color: #7CFC00; font-variant-numeric: tabular-nums; }
+.bar-track { height: 16px; border: 3px solid #3a3a4a; background: #15151c; margin: 6px 0; }
+.bar-fill { height: 100%; background: #7CFC00; }
+.pet { text-align: center; border: 3px solid #2a3a1a; background: #10160a; padding: 14px; }
+.pet .face { font-size: 46px; }
+.pet .pname { font-size: 18px; color: #7CFC00; }
+.pet .pmood { font-size: 13px; color: #9a9ab0; }
+

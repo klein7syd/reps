@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 构建产物（可随时重建，不进版本库）
+dist/index.html
+
+# 临时
+*.log
+.DS_Store
+_scratch/

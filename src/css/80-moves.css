@@ -1,0 +1,9 @@
+/* ===== 动作库 ===== */
+.mfilter { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.mfilter .chip { font-size: 11px; padding: 5px 8px; }
+.mcard { border: 3px solid #2a2a3a; background: #14141c; padding: 9px 10px; margin-bottom: 8px; }
+.mcard .mn { font-size: 14px; color: #e8e8f0; }
+.mcard .men { font-size: 11px; color: #6a6a80; }
+.mcard .mtags { font-size: 11px; color: #9a9ab0; margin: 4px 0; }
+.mcard .mcue { font-size: 11px; color: #7aa6ff; }
+

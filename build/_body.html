@@ -1,0 +1,128 @@
+<body>
+<div class="app">
+  <header class="bar">
+    <h1>REPS</h1>
+    <span class="today" id="today"></span>
+  </header>
+
+  <main>
+    <!-- 训练 -->
+    <section class="tab on" id="tab-train" aria-label="训练">
+      <div class="card">
+        <h2>本次训练</h2>
+        <label for="moveSel">选择动作</label>
+        <select id="moveSel" aria-label="选择动作"></select>
+        <p id="exName">未选择</p>
+        <div class="chips" id="restChips" role="group" aria-label="组间休息档位"></div>
+        <div class="numgrid">
+          <div><label for="wInput">重量 (kg)</label><input id="wInput" type="number" inputmode="decimal" min="0" step="0.5" aria-label="重量"></div>
+          <div><label for="rInput">次数</label><input id="rInput" type="number" inputmode="numeric" min="0" step="1" aria-label="次数"></div>
+        </div>
+        <div class="row">
+          <button class="primary" id="addSetBtn">+ 加一组</button>
+          <button id="skipRestBtn" disabled>跳过休息</button>
+        </div>
+        <div class="rest-box" id="restBox" hidden>
+          <div class="rest-time" id="restTime">0</div>
+          <div class="rest-state" id="restState">休息中</div>
+        </div>
+        <ul class="setlist" id="setList"></ul>
+        <div class="row" style="margin-top:10px">
+          <button class="danger" id="finishBtn">结束并保存</button>
+        </div>
+        <div id="trainMsg" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h2>陪伴音乐（导入本地音频）</h2>
+        <div id="audioBar">
+          <div class="row">
+            <button id="playBtn">▶ 播放</button>
+            <span class="tiny" id="audioName"></span>
+          </div>
+          <input class="seek" id="seek" type="range" min="0" max="100" value="0" aria-label="播放进度">
+          <div class="tiny" id="audioTime">0:00 / 0:00</div>
+          <div class="tiny" id="bondMsg"></div>
+        </div>
+        <input type="file" id="audioFile" accept="audio/*" aria-label="导入本地音乐">
+        <div id="audioMsg" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- 进度 -->
+    <section class="tab" id="tab-stats" aria-label="进度">
+      <div class="card">
+        <h2>训练进度</h2>
+        <div id="statsBody"></div>
+      </div>
+    </section>
+
+    <!-- 成长 -->
+    <section class="tab" id="tab-grow" aria-label="成长">
+      <div class="card">
+        <h2>修为与境界</h2>
+        <div id="growBody"></div>
+      </div>
+      <div class="card">
+        <h2>灵兽</h2>
+        <div id="petBody"></div>
+      </div>
+      <div class="card">
+        <h2>数据备份</h2>
+        <div class="row">
+          <button id="exportBtn">导出数据</button>
+          <button id="importBtn">导入数据</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <div id="dataMsg" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- 动作库 -->
+    <section class="tab" id="tab-moves" aria-label="动作库">
+      <div class="card">
+        <h2>动作库</h2>
+        <input id="moveSearch" type="search" placeholder="搜索动作 / 部位 / 器械" aria-label="搜索动作库">
+        <div class="mfilter" id="groupFilter" role="group" aria-label="按部位筛选"></div>
+        <div id="movesBody"></div>
+      </div>
+    </section>
+
+    <!-- 身体 -->
+    <section class="tab" id="tab-body" aria-label="身体数据">
+      <div class="card">
+        <h2>身体数据</h2>
+        <label for="sexSel">性别</label>
+        <select id="sexSel"><option value="m">男</option><option value="f">女</option></select>
+        <label for="ageInput">年龄</label><input id="ageInput" type="number" min="10" max="120" value="25" aria-label="年龄">
+        <label for="hInput">身高 (cm)</label><input id="hInput" type="number" min="100" max="250" value="175" aria-label="身高">
+        <label for="wBodyInput">体重 (kg)</label><input id="wBodyInput" type="number" min="30" max="300" value="70" aria-label="体重">
+        <label for="actSel">活动水平</label>
+        <select id="actSel">
+          <option value="1.2">久坐（几乎不运动）</option>
+          <option value="1.375">轻度（每周 1–3 次）</option>
+          <option value="1.55" selected>中等（每周 3–5 次）</option>
+          <option value="1.725">高强度（每周 6–7 次）</option>
+        </select>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="saveBodyBtn">保存并计算</button>
+        </div>
+        <div id="bodyMsg" style="margin-top:8px"></div>
+        <div class="metrics" id="bodyMetrics" style="margin-top:10px"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs" id="nav" aria-label="主导航">
+    <button data-tab="train" class="on" aria-label="训练"><span class="ic">▣</span>训练</button>
+    <button data-tab="stats" aria-label="进度"><span class="ic">▤</span>进度</button>
+    <button data-tab="grow" aria-label="成长"><span class="ic">✦</span>成长</button>
+    <button data-tab="moves" aria-label="动作库"><span class="ic">≡</span>动作库</button>
+    <button data-tab="body" aria-label="身体数据"><span class="ic">◈</span>身体</button>
+  </nav>
+</div>
+
+<!--{{SCRIPT:__PLACEHOLDER__}}-->
+<!--{{SCRIPT:__PLACEHOLDER__}}-->
+<!--{{SCRIPT:__PLACEHOLDER__}}-->
+</body>

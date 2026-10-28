@@ -1,0 +1,14 @@
+/* ===== 三态 ===== */
+.state-empty  { color: #8a8aa0; border: 3px dashed #2a2a3a; padding: 18px 12px; text-align: center; }
+.state-loading { color: #7CFC00; border: 3px solid #2a3a1a; padding: 18px 12px; text-align: center; }
+.state-loading::after { content: "▮"; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.state-error  { color: #ffb3c8; border: 3px solid #ff004d; padding: 12px; background: #2a0a14; }
+.toast {
+  position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%);
+  background: #1d3a00; border: 3px solid #7CFC00; color: #d6ffb0;
+  padding: 10px 14px; font-size: 13px; z-index: 50; max-width: 90%;
+  box-shadow: 3px 3px 0 #000;
+}
+.toast.err { background: #2a0a14; border-color: #ff004d; color: #ffb3c8; }
+

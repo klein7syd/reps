@@ -1,0 +1,7 @@
+/* ===== 卡片 / 区块 ===== */
+.card { border: 3px solid #2a2a3a; background: #14141c; padding: 12px; margin-bottom: 12px; }
+.card h2 { font-size: 13px; margin: 0 0 8px; color: #9a9ab0; letter-spacing: 1px; text-transform: uppercase; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > * { min-width: 0; }
+.spread { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+

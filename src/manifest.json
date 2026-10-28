@@ -1,0 +1,33 @@
+{
+  "css": [
+    "00-base.css",
+    "10-controls.css",
+    "20-tabbar.css",
+    "30-card.css",
+    "40-state.css",
+    "50-train.css",
+    "60-progress.css",
+    "70-grow.css",
+    "80-moves.css",
+    "85-body.css",
+    "90-audio.css",
+    "95-responsive.css"
+  ],
+  "js": [
+    "moves.js",
+    "grow.js",
+    "app.js"
+  ],
+  "appFragments": [
+    "00-state.js",
+    "20-train.js",
+    "30-progress.js",
+    "40-grow-page.js",
+    "50-moves-page.js",
+    "60-body-page.js",
+    "70-audio.js",
+    "80-backup.js",
+    "85-tabs.js",
+    "90-init.js"
+  ]
+}
