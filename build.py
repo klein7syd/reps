@@ -102,12 +102,12 @@ def build():
 
     modules = {}
     for name, text in collect("js"):
-        key = name.replace(".js", "")
-        if key == "app":
-            # app 由片段现场拼装，绝不读静态 app.js——
-            # 否则改了片段却不生效，是最危险的静默失败。
-            text = assemble_app()
-        modules[key] = text
+        modules[name.replace(".js", "")] = text
+
+    # app 由片段现场拼装，绝不读静态 app.js——
+    # 否则改了片段却不生效，是最危险的静默失败。
+    # 单独注入，不进 manifest 的 js 列表（那里列的是真实文件）。
+    modules["app"] = assemble_app()
 
     for slot in re.findall(r"\[\[MODULE:(\w+)\]\]", body):
         if slot not in modules:

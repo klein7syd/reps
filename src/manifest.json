@@ -15,8 +15,7 @@
   ],
   "js": [
     "moves.js",
-    "grow.js",
-    "app.js"
+    "grow.js"
   ],
   "appFragments": [
     "00-state.js",
