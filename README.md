@@ -6,6 +6,15 @@
 
 产出的仍然是**一个 78 KB 的单文件 HTML**：0 个 `<script src>`、0 个 `<link>`、0 个外链。
 
+## 远程仓库
+
+`https://github.com/klein7syd/reps` · 分支 `main` · **公开仓库**
+
+```bash
+./push.sh        # 首次推送（需先授权 GitHub 连接器）
+git pull         # 之后每次开工前
+```
+
 ## 三条命令
 
 ```bash
@@ -25,6 +34,11 @@ python3 test/regress.py       # 28 项回归（构建产物必须全过才算能
 | 与线上一致 | 是（`a582baf0294c5e5e6.app.workbuddy.host`） |
 | 回归 | 28/28 通过 |
 | 代码片段 | CSS 12 段 + JS 3 模块（app 内含 10 段） |
+
+## 自动化
+
+`.github/workflows/ci.yml`：每次 push / PR 自动构建 + 跑 28 项回归，产物作为 artifact 保留 30 天。
+**改坏了会直接红**，不用等别人发现。
 
 ## 我要改代码，怎么开始
 
