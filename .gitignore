@@ -10,3 +10,7 @@ dist/index.html
 *.log
 .DS_Store
 _scratch/
+
+# 推送令牌（绝不入库）
+.gh_token
+*.token
